@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>冠軍嚴選團購網</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6.6.0 (包含 Threads 圖示) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: 'var(--brand-color)',
+                        'brand-light': 'var(--brand-color-light)',
+                        'brand-dark': 'var(--brand-color-dark)',
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        :root {
+            --brand-color: #e11d48; 
+            --brand-color-light: #f43f5e; 
+            --brand-color-dark: #be123c; 
+        }
+
+        body {
+            background-color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .product-card-hover {
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .product-card-hover:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        }
+        
+        .img-zoom-hover {
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .product-card-hover:hover .img-zoom-hover {
+            transform: scale(1.08);
+        }
+
+        .toast-enter { opacity: 0; transform: translateY(-20px); }
+        .toast-enter-active { opacity: 1; transform: translateY(0); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .toast-exit { opacity: 1; }
+        .toast-exit-active { opacity: 0; transform: translateY(-10px); transition: all 0.2s ease-in; }
+    </style>
+</head>
+<body class="text-gray-800 flex flex-col min-h-screen">
+
+    <!-- 載入中遮罩 -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm z-[999] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-12 h-12 border-4 border-gray-200 border-t-brand rounded-full animate-spin mb-4"></div>
+        <p class="text-brand font-bold tracking-widest text-sm">LOADING...</p>
+    </div>
+
+    <!-- 自訂訊息框容器 -->
+    <div id="toastContainer" class="fixed top-20 left-4 right-4 md:left-auto md:right-8 z-[100] flex flex-col gap-3 pointer-events-none items-center md:items-end"></div>
+
+    <!-- ================= 初始身分選擇/登入 Modal ================= -->
+    <div id="authGateModal" class="fixed inset-0 bg-slate-900/80 z-[300] flex flex-col items-center justify-center backdrop-blur-md p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl flex flex-col relative animate-fade-in-up overflow-hidden border border-slate-100">
+            <!-- Header -->
+            <div class="px-8 pt-8 pb-6 text-center bg-gradient-to-b from-slate-50 to-white">
+                <div class="w-16 h-16 rounded-2xl bg-brand/10 text-brand flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">冠軍嚴選團購網</h2>
+                <p class="text-xs text-slate-500 mt-1">請選擇您的進入身分以繼續</p>
+            </div>
+            
+            <!-- Body -->
+            <div class="px-8 pb-8 space-y-5">
+                <!-- 訪客進入按鈕 -->
+                <button onclick="handleAnonymousEnter()" class="w-full py-4 px-6 rounded-2xl border-2 border-slate-200 hover:border-brand hover:bg-brand/5 text-slate-700 font-bold transition-all flex items-center justify-between group shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-brand group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-eye text-lg"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-sm">一般訪客瀏覽</div>
+                            <div class="text-[11px] text-slate-400 font-normal">查看商品目錄與最新優惠</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-brand"></i>
+                </button>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-200"></div>
+                    <span class="flex-shrink mx-4 text-slate-400 text-xs">或 團主管理</span>
+                    <div class="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <!-- 團主登入表單 -->
+                <div class="space-y-3 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">管理員帳號</label>
+                        <input type="text" id="loginUsername" class="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none text-sm" placeholder="請輸入帳號">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">密碼</label>
+                        <input type="password" id="loginPassword" class="w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none text-sm" placeholder="請輸入密碼" onkeypress="if(event.key === 'Enter') handleAdminLogin()">
+                    </div>
+                    <button onclick="handleAdminLogin()" class="w-full py-3.5 mt-2 text-white bg-slate-900 hover:bg-black rounded-xl font-bold shadow-md transition-colors flex items-center justify-center gap-2 text-sm">
+                        <span>團主身分登入</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 前端視圖 (消費者) ================= -->
+    <div id="publicView" class="flex-grow flex flex-col w-full mx-auto min-h-screen relative transition-all duration-300">
+        
+        <!-- 琉璃導覽列 -->
+        <header class="glass-header sticky top-0 z-40 transition-all duration-300">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex justify-between items-center">
+                <div class="flex items-center gap-3 cursor-pointer group">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl md:text-2xl shadow-lg shadow-brand/20 group-hover:rotate-12 transition-transform duration-300 overflow-hidden">
+                        <div id="headerLogoDefault" class="w-full h-full bg-gradient-to-br from-brand-light to-brand flex items-center justify-center"><i class="fa-solid fa-crown"></i></div>
+                        <img id="headerLogoImg" src="" alt="Logo" class="hidden w-full h-full object-cover bg-white">
+                    </div>
+                    <h1 class="text-xl md:text-2xl font-black text-gray-900 tracking-tight" id="siteTitleDisplay">冠軍嚴選</h1>
+                </div>
+                
+                <!-- 團主管理切換按鈕 (只有已登入團主才顯示，或點擊時若未登入則彈出閘道) -->
+                <button onclick="openAdminOrGate()" class="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-brand transition-colors px-3 py-2 rounded-lg hover:bg-gray-100">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span id="adminButtonLabel" class="hidden sm:inline">團主管理</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 主視覺與公告區 -->
+        <div class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mt-6 md:mt-8 mb-10">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 h-auto lg:h-[400px]">
+                <!-- 左側：主視覺橫幅 -->
+                <div class="lg:col-span-2 h-[220px] sm:h-[280px] lg:h-full rounded-3xl relative overflow-hidden group shadow-lg">
+                    <img id="heroImageDisplay" src="https://placehold.co/1200x500/f8fafc/94a3b8?text=Banner" alt="Hero Banner" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105">
+                    <div class="absolute inset-0 bg-gradient-to-r from-gray-900/80 via-gray-900/40 to-transparent flex items-center">
+                        <div class="p-6 sm:p-8 md:p-12 w-full md:w-3/4 text-white">
+                            <span class="px-4 py-1.5 bg-brand text-xs font-bold rounded-full uppercase tracking-widest mb-3 md:mb-4 inline-block shadow-md">HOT DEAL</span>
+                            <h2 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-3 md:mb-4 leading-tight drop-shadow-lg" id="heroTitleDisplay">精選強檔優惠</h2>
+                            <p class="text-sm sm:text-base md:text-lg text-gray-100 drop-shadow-md max-w-md line-clamp-2" id="heroSubtitleDisplay">嚴選各國好物，跟著冠軍買最划算</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側：最新消息公告 -->
+                <div class="lg:col-span-1 bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-[300px] lg:h-full">
+                    <div class="p-5 border-b border-slate-100 bg-slate-50/80 flex items-center gap-3 shrink-0">
+                        <div class="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center animate-pulse">
+                            <i class="fa-solid fa-bell"></i>
+                        </div>
+                        <h3 class="font-bold text-slate-800 text-lg tracking-tight">最新消息</h3>
+                    </div>
+                    <div class="flex-grow overflow-y-auto p-2">
+                        <ul id="publicAnnouncementList" class="divide-y divide-slate-100"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 商品目錄區塊 -->
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 mb-20">
+            <div class="flex justify-between items-end mb-8 border-b-2 border-gray-100 pb-4">
+                <div>
+                    <h3 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">熱銷開團 <i class="fa-solid fa-fire text-brand ml-1"></i></h3>
+                    <p class="text-sm text-gray-500 mt-2">精挑細選，只給您最好的品質</p>
+                </div>
+                <div class="text-sm font-medium bg-white px-4 py-1.5 rounded-full shadow-sm border border-gray-100 text-gray-600">
+                    共 <span id="publicProductCount" class="font-bold text-brand text-lg mx-1">0</span> 件
+                </div>
+            </div>
+
+            <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"></div>
+            
+            <div id="emptyProductsMessage" class="hidden flex flex-col items-center justify-center py-20 md:py-32 bg-white rounded-3xl border border-dashed border-gray-200 mx-4 sm:mx-0">
+                <div class="w-20 h-20 md:w-24 md:h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                    <i class="fa-solid fa-box-open text-3xl md:text-4xl text-gray-300"></i>
+                </div>
+                <h4 class="text-lg md:text-xl font-bold text-gray-700 mb-2">目前沒有商品上架</h4>
+                <p class="text-sm md:text-base text-gray-400 text-center px-4">團主正在努力尋找好物，請稍後再回來看看！</p>
+            </div>
+        </main>
+
+        <!-- 法規遵循頁尾 -->
+        <footer class="bg-gray-950 text-gray-400 pt-16 pb-8 px-4 sm:px-6 lg:px-8 text-sm mt-auto">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-16 border-b border-gray-800 pb-12">
+                <div class="md:col-span-4 lg:col-span-5">
+                    <div class="flex items-center gap-2 mb-6">
+                        <i class="fa-solid fa-crown text-brand text-2xl" id="footerLogoDefault"></i>
+                        <img id="footerLogoImg" src="" alt="Logo" class="hidden h-8 object-contain bg-transparent rounded">
+                        <span class="text-xl font-black text-white tracking-widest" id="footerSiteName">冠軍嚴選</span>
+                    </div>
+                    <p class="text-gray-500 leading-relaxed mb-6">我們致力於提供最優質的嚴選商品，透過集體採購的力量，為您爭取最實惠的價格。</p>
+                    <div class="flex gap-4" id="footerSocialLinks">
+                        <a href="#" id="linkLine" target="_blank" class="hidden w-10 h-10 rounded-full bg-gray-900 items-center justify-center hover:bg-brand hover:text-white transition-colors"><i class="fa-brands fa-line text-lg"></i></a>
+                        <a href="#" id="linkFacebook" target="_blank" class="hidden w-10 h-10 rounded-full bg-gray-900 items-center justify-center hover:bg-brand hover:text-white transition-colors"><i class="fa-brands fa-facebook-f"></i></a>
+                        <a href="#" id="linkInstagram" target="_blank" class="hidden w-10 h-10 rounded-full bg-gray-900 items-center justify-center hover:bg-brand hover:text-white transition-colors"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" id="linkThreads" target="_blank" class="hidden w-10 h-10 rounded-full bg-gray-900 items-center justify-center hover:bg-brand hover:text-white transition-colors"><i class="fa-brands fa-threads text-lg"></i></a>
+                    </div>
+                </div>
+
+                <div class="md:col-span-4 lg:col-span-4">
+                    <h4 class="text-white text-base font-bold mb-6 tracking-widest">營業資訊與聯絡方式</h4>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-building text-gray-600 mt-1"></i>
+                            <div>
+                                <span class="block text-xs text-gray-500">營業人名稱</span>
+                                <span class="text-gray-300 font-medium" id="footerCompanyName">尚未設定</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fa-solid fa-file-invoice-dollar text-gray-600 mt-1"></i>
+                            <div>
+                                <span class="block text-xs text-gray-500">統一編號</span>
+                                <span class="text-gray-300 font-medium font-mono" id="footerTaxId">尚未設定</span>
+                            </div>
+                        </li>
+                        <li class="hidden items-start gap-3" id="footerEmailContainer">
+                            <i class="fa-solid fa-envelope text-gray-600 mt-1"></i>
+                            <div>
+                                <span class="block text-xs text-gray-500">客服信箱</span>
+                                <span class="text-gray-300 font-medium" id="footerEmail">尚未設定</span>
+                            </div>
+                        </li>
+                        <li class="hidden items-start gap-3" id="footerPhoneContainer">
+                            <i class="fa-solid fa-phone text-gray-600 mt-1"></i>
+                            <div>
+                                <span class="block text-xs text-gray-500">客服專線</span>
+                                <span class="text-gray-300 font-medium" id="footerPhone">尚未設定</span>
+                            </div>
+                        </li>
+                        <li class="hidden items-start gap-3" id="footerMobileContainer">
+                            <i class="fa-solid fa-mobile-screen text-gray-600 mt-1"></i>
+                            <div>
+                                <span class="block text-xs text-gray-500">聯絡手機</span>
+                                <span class="text-gray-300 font-medium" id="footerMobile">尚未設定</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="md:col-span-4 lg:col-span-3">
+                    <h4 class="text-white text-base font-bold mb-6 tracking-widest">購物與法規須知</h4>
+                    <ul class="space-y-3">
+                        <li><a href="javascript:void(0)" onclick="openPolicyModal('returnPolicy')" class="hover:text-white transition-colors flex items-center gap-2"><i class="fa-solid fa-angle-right text-xs text-gray-700"></i> 退換貨政策 (七天鑑賞期)</a></li>
+                        <li><a href="javascript:void(0)" onclick="openPolicyModal('privacyPolicy')" class="hover:text-white transition-colors flex items-center gap-2"><i class="fa-solid fa-angle-right text-xs text-gray-700"></i> 隱私權保護政策</a></li>
+                        <li><a href="javascript:void(0)" onclick="openPolicyModal('antiFraudPolicy')" class="hover:text-white transition-colors flex items-center gap-2"><i class="fa-solid fa-angle-right text-xs text-gray-700"></i> 防詐騙宣導</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="text-center mt-8 text-gray-600 text-xs">
+                &copy; <span id="currentYear"></span> <span id="footerSiteNameBottom">冠軍嚴選</span>. All rights reserved.
+            </div>
+        </footer>
+    </div>
+
+
+    <!-- ================= 後台視圖 (管理員專屬) ================= -->
+    <div id="adminView" class="hidden min-h-screen w-full bg-slate-50 flex flex-col transition-all duration-300">
+        <header class="bg-white w-full border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 py-4 shadow-sm z-20 sticky top-0">
+            <div class="font-black text-slate-800 text-lg sm:text-xl tracking-tight flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                </div>
+                <span>團主控制台 (管理模式)</span>
+            </div>
+            
+            <button onclick="logoutAdmin()" class="bg-white border border-slate-200 px-4 py-2 rounded-xl text-slate-600 font-medium hover:border-red-500 hover:text-red-500 transition-all flex items-center justify-center gap-2 shadow-sm whitespace-nowrap text-sm">
+                <i class="fa-solid fa-right-from-bracket"></i><span>登出返回前台</span>
+            </button>
+        </header>
+
+        <main class="flex-grow p-4 md:p-8 lg:p-10">
+            <div class="max-w-6xl mx-auto space-y-12 pb-24">
+            
+            <!-- 1. 商品管理 -->
+            <div id="section-products">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tight">商品管理</h2>
+                        <p class="text-slate-500 mt-1 text-sm">新增、編輯您的團購商品，設定價格與法規標籤。</p>
+                    </div>
+                    <button onclick="openProductModal()" class="bg-brand hover:bg-brand-dark text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-brand/30 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-plus"></i>發布新商品
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[600px]">
+                            <thead>
+                                <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-500 text-xs font-bold uppercase tracking-widest">
+                                    <th class="p-5 w-24">圖片</th>
+                                    <th class="p-5">商品資訊</th>
+                                    <th class="p-5">售價 / 原價</th>
+                                    <th class="p-5">狀態</th>
+                                    <th class="p-5 text-right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminProductTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200 border-dashed">
+
+            <!-- 2. 最新消息公告 -->
+            <div id="section-announcements">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight">最新消息公告</h2>
+                    <p class="text-slate-500 mt-1 text-sm">發布最新消息、折扣碼或到貨通知，顯示於前台首頁右側。</p>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 mb-8">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-pen-to-square text-brand"></i>新增公告
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-4 items-start">
+                        <textarea id="newAnnouncementText" class="flex-grow w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand outline-none resize-none h-24 text-slate-700 text-sm" placeholder="例如：雙11特惠開跑！"></textarea>
+                        <button onclick="addAnnouncement()" class="w-full sm:w-auto bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-xl font-bold shadow-md sm:h-24 flex flex-col items-center justify-center gap-2 whitespace-nowrap text-sm">
+                            <i class="fa-solid fa-paper-plane text-xl"></i>
+                            <span>發布</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-5 bg-slate-50/80 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-widest">歷史公告</div>
+                    <ul id="announcementList" class="divide-y divide-slate-100"></ul>
+                </div>
+            </div>
+
+            <hr class="border-slate-200 border-dashed">
+
+            <!-- 3. 網站自訂 -->
+            <div id="section-settings">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tight">網站自訂</h2>
+                        <p class="text-slate-500 mt-1 text-sm">打造您的專屬品牌視覺，並填寫營業資訊。</p>
+                    </div>
+                    <button onclick="saveSettings()" class="bg-brand hover:bg-brand-dark text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-brand/30 flex items-center gap-2 text-sm">
+                        <i class="fa-solid fa-floppy-disk"></i>儲存所有設定
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6">
+                        <h3 class="font-black text-slate-800 text-lg flex items-center gap-2">品牌視覺與橫幅</h3>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">商店名稱</label>
+                            <input type="text" id="setSiteTitle" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">品牌 Logo 圖片網址</label>
+                            <input type="url" id="setLogoImage" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">品牌主色調</label>
+                            <div class="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                                <input type="color" id="setColorPicker" class="h-10 w-14 rounded cursor-pointer border-0 p-0 bg-transparent">
+                                <input type="text" id="setBrandColor" class="flex-grow p-2 bg-transparent outline-none font-mono text-sm uppercase">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">橫幅大標題</label>
+                            <input type="text" id="setHeroTitle" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">橫幅副標題</label>
+                            <input type="text" id="setHeroSubtitle" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">橫幅圖片網址</label>
+                            <input type="url" id="setHeroImage" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6">
+                        <h3 class="font-black text-slate-800 text-lg flex items-center gap-2">營業資訊與合規</h3>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">營業人名稱</label>
+                            <input type="text" id="setCompanyName" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-700 mb-2">統一編號</label>
+                            <input type="text" id="setTaxId" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm" maxlength="8">
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6 md:col-span-2">
+                        <h3 class="font-black text-slate-800 text-lg flex items-center gap-2">聯絡方式與社群</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">客服信箱</label><input type="email" id="setEmail" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"></div>
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">市話</label><input type="text" id="setPhone" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"></div>
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">手機</label><input type="text" id="setMobile" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"></div>
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">LINE 連結</label><input type="text" id="setLine" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"></div>
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">FB 連結</label><input type="text" id="setFacebook" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"></div>
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">IG 連結</label><input type="text" id="setInstagram" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"></div>
+                            <div><label class="block text-sm font-bold text-slate-700 mb-2">Threads 連結</label><input type="text" id="setThreads" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6 md:col-span-2">
+                        <h3 class="font-black text-slate-800 text-lg flex items-center gap-2">政策條款設定</h3>
+                        <div><label class="block text-sm font-bold text-slate-700 mb-2">退換貨政策</label><textarea id="setReturnPolicy" rows="4" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea></div>
+                        <div><label class="block text-sm font-bold text-slate-700 mb-2">隱私權保護政策</label><textarea id="setPrivacyPolicy" rows="4" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea></div>
+                        <div><label class="block text-sm font-bold text-slate-700 mb-2">防詐騙宣導</label><textarea id="setAntiFraudPolicy" rows="3" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm"></textarea></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 政策閱讀 Modal -->
+    <div id="policyModal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden flex-col items-center justify-end md:justify-center backdrop-blur-sm p-0 md:p-4">
+        <div class="absolute inset-0" onclick="closePolicyModal()"></div>
+        <div class="bg-white w-full max-w-2xl max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col relative z-10">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-3xl">
+                <h3 class="text-lg font-black text-slate-800" id="policyModalTitle">條款與政策</h3>
+                <button onclick="closePolicyModal()" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-200"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow text-slate-700 text-sm leading-relaxed whitespace-pre-wrap" id="policyModalContent"></div>
+            <div class="px-6 py-4 border-t border-slate-100 bg-white flex justify-end pb-6 md:pb-4">
+                <button onclick="closePolicyModal()" class="w-full md:w-auto px-8 py-3 text-white bg-slate-900 rounded-xl font-bold text-sm">我已了解</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品編輯 Modal -->
+    <div id="productModal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden flex-col items-center justify-end md:justify-center backdrop-blur-sm p-0 md:p-4">
+        <div class="absolute inset-0" onclick="closeProductModal()"></div>
+        <div class="bg-white w-full max-w-2xl max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col relative z-10">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-3xl">
+                <h3 class="text-lg font-black text-slate-800" id="modalTitle">新增商品</h3>
+                <button onclick="closeProductModal()" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-200"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow space-y-4 text-sm">
+                <input type="hidden" id="prodId">
+                <div><label class="block font-bold text-slate-700 mb-1">商品名稱 *</label><input type="text" id="prodName" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"></div>
+                <div><label class="block font-bold text-slate-700 mb-1">圖片 URL *</label><input type="url" id="prodImage" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">分類</label>
+                        <select id="prodCategory" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                            <option value="生鮮食品">生鮮食品</option>
+                            <option value="美妝保養">美妝保養</option>
+                            <option value="3C家電">3C家電</option>
+                            <option value="零食烘焙">零食烘焙</option>
+                            <option value="生活百貨">生活百貨</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">按鈕文字</label>
+                        <input type="text" id="prodButtonText" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" placeholder="例如：立即搶購">
+                        <div class="flex gap-1 mt-1 flex-wrap">
+                            <button onclick="document.getElementById('prodButtonText').value='搶購一空'" class="text-[10px] bg-slate-200 px-2 py-0.5 rounded">搶購一空</button>
+                            <button onclick="document.getElementById('prodButtonText').value='限時優惠'" class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded">限時優惠</button>
+                            <button onclick="document.getElementById('prodButtonText').value='人氣熱銷'" class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded">人氣熱銷</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block font-bold text-slate-700 mb-1">團購價 *</label><input type="number" id="prodPrice" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"></div>
+                    <div><label class="block font-bold text-slate-700 mb-1">原價</label><input type="number" id="prodOriginalPrice" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"></div>
+                </div>
+                <div><label class="block font-bold text-slate-700 mb-1">簡介</label><textarea id="prodDesc" rows="2" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"></textarea></div>
+                <div class="flex gap-4 pt-2">
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="prodIsActive" class="w-4 h-4 text-brand"> 上架</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="prodNoReturn" class="w-4 h-4 text-red-500"> 不退貨</label>
+                    <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="prodIsFood" class="w-4 h-4 text-amber-500"> 食品</label>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-100 bg-white flex justify-end gap-2 pb-6 md:pb-4">
+                <button onclick="closeProductModal()" class="px-5 py-2.5 bg-slate-100 rounded-xl font-bold text-slate-600">取消</button>
+                <button onclick="saveProduct()" class="px-6 py-2.5 bg-brand text-white rounded-xl font-bold">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs & App Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAwNmDYcBypAUssVPLSfS3aOMZ9HlkQ-kE",
+            authDomain: "dealsite-ba93f.firebaseapp.com",
+            projectId: "dealsite-ba93f",
+            storageBucket: "dealsite-ba93f.firebasestorage.app",
+            messagingSenderId: "602928217692",
+            appId: "1:602928217692:web:c07dbd3f21f4f29fd4b099"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'champion-deal-site';
+        let currentUser = null;
+        window.isAdminLoggedIn = false;
+
+        const productsRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+        const announcementsRef = collection(db, 'artifacts', appId, 'public', 'data', 'announcements');
+        const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main');
+
+        window.appState = {
+            settings: {
+                brandColor: '#e11d48',
+                logoImage: '',
+                siteTitle: '冠軍嚴選',
+                heroTitle: '精選強檔優惠',
+                heroSubtitle: '嚴選各國好物，跟著冠軍買最划算',
+                heroImage: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2070&auto=format&fit=crop',
+                companyName: '冠軍行銷有限公司',
+                taxId: '87654321',
+                email: 'service@champion-select.com',
+                phone: '02-23456789',
+                mobile: '0912-345-678',
+                line: '#', facebook: '#', instagram: '#', threads: '#',
+                returnPolicy: '依據消費者保護法規定，享有商品到貨七天猶豫期...',
+                privacyPolicy: '本網站極為重視您的隱私權...',
+                antiFraudPolicy: '防詐騙提醒：絕對不會主動電話要求操作ATM。'
+            },
+            products: [],
+            announcements: []
+        };
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            let bgClass = 'bg-slate-900', icon = 'fa-circle-info';
+            if(type === 'success') { bgClass = 'bg-emerald-500'; icon = 'fa-circle-check'; }
+            if(type === 'error') { bgClass = 'bg-red-500'; icon = 'fa-circle-xmark'; }
+            toast.className = `toast-enter flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl ${bgClass} text-white text-sm font-bold w-full md:w-auto min-w-[250px] max-w-sm`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg shrink-0"></i><span class="flex-grow">${message}</span>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-enter-active'); });
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function formatMoney(num) {
+            return '$' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function adjustColorLightness(hex, percent) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            let r = parseInt(hex.substring(0, 2), 16);
+            let g = parseInt(hex.substring(2, 4), 16);
+            let b = parseInt(hex.substring(4, 6), 16);
+            r = Math.min(255, Math.max(0, Math.round(r * (1 + percent/100))));
+            g = Math.min(255, Math.max(0, Math.round(g * (1 + percent/100))));
+            b = Math.min(255, Math.max(0, Math.round(b * (1 + percent/100))));
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        // 初始身分：一般訪客點擊匿名進入
+        window.handleAnonymousEnter = async function() {
+            try {
+                await signInAnonymously(auth);
+                document.getElementById('authGateModal').classList.add('hidden');
+                showToast("已以訪客身分進入網站", "success");
+            } catch (e) {
+                console.error(e);
+                showToast("連線發生錯誤", "error");
+            }
+        };
+
+        // 團主身分登入
+        window.handleAdminLogin = async function() {
+            const user = document.getElementById('loginUsername').value.trim();
+            const pass = document.getElementById('loginPassword').value.trim();
+            
+            if (user === 'admin123' && pass === 'admin123') {
+                try {
+                    await signInAnonymously(auth);
+                    window.isAdminLoggedIn = true;
+                    document.getElementById('authGateModal').classList.add('hidden');
+                    // 進入後台
+                    document.getElementById('publicView').classList.add('hidden');
+                    document.getElementById('adminView').classList.remove('hidden');
+                    showToast("團主登入成功", "success");
+                } catch (e) {
+                    showToast("登入授權失敗", "error");
+                }
+            } else {
+                showToast("管理員帳號或密碼錯誤", "error");
+            }
+        };
+
+        window.openAdminOrGate = function() {
+            if (window.isAdminLoggedIn) {
+                document.getElementById('publicView').classList.add('hidden');
+                document.getElementById('adminView').classList.remove('hidden');
+            } else {
+                // 如果是訪客點擊管理，開啟登入閘道
+                document.getElementById('authGateModal').classList.remove('hidden');
+            }
+        };
+
+        window.logoutAdmin = function() {
+            window.isAdminLoggedIn = false;
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('publicView').classList.remove('hidden');
+            showToast("已登出管理控制台", "info");
+        };
+
+        let isFirstLoad = true;
+        function setupListeners() {
+            onSnapshot(settingsDocRef, (snap) => {
+                if (snap.exists()) window.appState.settings = { ...window.appState.settings, ...snap.data() };
+                applySettings();
+                if (isFirstLoad) {
+                    const overlay = document.getElementById('loadingOverlay');
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.classList.add('hidden'), 500);
+                    isFirstLoad = false;
+                }
+            }, (error) => {
+                if (error.code === 'permission-denied') {
+                    showToast("Firebase 權限不足，請檢查規則設定！", "error");
+                }
+            });
+
+            onSnapshot(productsRef, (snap) => {
+                window.appState.products = [];
+                snap.forEach(d => window.appState.products.push({ id: d.id, ...d.data() }));
+                renderProducts();
+            });
+
+            onSnapshot(announcementsRef, (snap) => {
+                window.appState.announcements = [];
+                snap.forEach(d => window.appState.announcements.push({ id: d.id, ...d.data() }));
+                renderAnnouncements();
+            });
+        }
+
+        onAuthStateChanged(auth, (user) => { currentUser = user; });
+        document.addEventListener('DOMContentLoaded', setupListeners);
+
+        function applySettings() {
+            const s = window.appState.settings;
+            document.documentElement.style.setProperty('--brand-color', s.brandColor);
+            document.documentElement.style.setProperty('--brand-color-light', adjustColorLightness(s.brandColor, 15));
+            document.documentElement.style.setProperty('--brand-color-dark', adjustColorLightness(s.brandColor, -15));
+
+            const headerDef = document.getElementById('headerLogoDefault');
+            const headerImg = document.getElementById('headerLogoImg');
+            const footerDef = document.getElementById('footerLogoDefault');
+            const footerImg = document.getElementById('footerLogoImg');
+
+            if (s.logoImage) {
+                headerDef.classList.add('hidden'); headerImg.classList.remove('hidden'); headerImg.src = s.logoImage;
+                footerDef.classList.add('hidden'); footerImg.classList.remove('hidden'); footerImg.src = s.logoImage;
+            } else {
+                headerDef.classList.remove('hidden'); headerImg.classList.add('hidden');
+                footerDef.classList.remove('hidden'); footerImg.classList.add('hidden');
+            }
+
+            document.getElementById('siteTitleDisplay').textContent = s.siteTitle;
+            document.getElementById('heroTitleDisplay').textContent = s.heroTitle;
+            document.getElementById('heroSubtitleDisplay').textContent = s.heroSubtitle;
+            document.getElementById('heroImageDisplay').src = s.heroImage;
+            document.getElementById('footerSiteName').textContent = s.siteTitle;
+            document.getElementById('footerSiteNameBottom').textContent = s.siteTitle;
+            document.getElementById('footerCompanyName').textContent = s.companyName || '尚未設定';
+            document.getElementById('footerTaxId').textContent = s.taxId || '尚未設定';
+
+            const toggleContainer = (id, val, textId) => {
+                const el = document.getElementById(id);
+                if (val) { el.classList.replace('hidden', 'flex'); document.getElementById(textId).textContent = val; }
+                else { el.classList.replace('flex', 'hidden'); }
+            };
+            toggleContainer('footerEmailContainer', s.email, 'footerEmail');
+            toggleContainer('footerPhoneContainer', s.phone, 'footerPhone');
+            toggleContainer('footerMobileContainer', s.mobile, 'footerMobile');
+
+            const setSocial = (id, url) => {
+                const el = document.getElementById(id);
+                if (url) { el.classList.replace('hidden', 'flex'); el.href = url; }
+                else { el.classList.replace('flex', 'hidden'); }
+            };
+            setSocial('linkLine', s.line);
+            setSocial('linkFacebook', s.facebook);
+            setSocial('linkInstagram', s.instagram);
+            setSocial('linkThreads', s.threads);
+
+            document.getElementById('setSiteTitle').value = s.siteTitle;
+            document.getElementById('setLogoImage').value = s.logoImage || '';
+            document.getElementById('setBrandColor').value = s.brandColor;
+            document.getElementById('setColorPicker').value = s.brandColor;
+            document.getElementById('setHeroTitle').value = s.heroTitle;
+            document.getElementById('setHeroSubtitle').value = s.heroSubtitle;
+            document.getElementById('setHeroImage').value = s.heroImage;
+            document.getElementById('setCompanyName').value = s.companyName || '';
+            document.getElementById('setTaxId').value = s.taxId || '';
+            document.getElementById('setEmail').value = s.email || '';
+            document.getElementById('setPhone').value = s.phone || '';
+            document.getElementById('setMobile').value = s.mobile || '';
+            document.getElementById('setLine').value = s.line || '';
+            document.getElementById('setFacebook').value = s.facebook || '';
+            document.getElementById('setInstagram').value = s.instagram || '';
+            document.getElementById('setThreads').value = s.threads || '';
+            document.getElementById('setReturnPolicy').value = s.returnPolicy || '';
+            document.getElementById('setPrivacyPolicy').value = s.privacyPolicy || '';
+            document.getElementById('setAntiFraudPolicy').value = s.antiFraudPolicy || '';
+
+            document.getElementById('setColorPicker').oninput = e => document.getElementById('setBrandColor').value = e.target.value;
+            document.getElementById('setBrandColor').oninput = e => document.getElementById('setColorPicker').value = e.target.value;
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            const tableBody = document.getElementById('adminProductTableBody');
+            const emptyMsg = document.getElementById('emptyProductsMessage');
+            const countDisplay = document.getElementById('publicProductCount');
+            
+            grid.innerHTML = ''; tableBody.innerHTML = '';
+            let activeCount = 0;
+            const sorted = [...window.appState.products].sort((a,b) => b.createdAt - a.createdAt);
+            
+            if (sorted.length === 0) {
+                emptyMsg.classList.remove('hidden'); grid.classList.add('hidden');
+                tableBody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400">目前尚無商品</td></tr>';
+                countDisplay.textContent = '0'; return;
+            }
+
+            emptyMsg.classList.add('hidden'); grid.classList.remove('hidden');
+
+            sorted.forEach((p, idx) => {
+                if (p.isActive) {
+                    activeCount++;
+                    let tags = '';
+                    if (p.noReturn) tags += `<span class="bg-red-500/90 text-white text-[10px] font-bold px-2 py-1 rounded">不退貨</span>`;
+                    if (p.isFood) tags += `<span class="bg-amber-500/90 text-white text-[10px] font-bold px-2 py-1 rounded">食品合規</span>`;
+
+                    const btnText = p.buttonText || '立即搶購';
+                    const isSoldOut = btnText.includes('售完') || btnText.includes('一空');
+                    let btnClass = isSoldOut ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-brand';
+
+                    grid.innerHTML += `
+                        <div class="product-card-hover bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 flex flex-col h-full relative opacity-0 animate-fade-in-up" style="animation-delay: ${idx*50}ms">
+                            <div class="absolute top-4 left-4 z-10"><span class="bg-white/90 text-brand text-xs font-black px-3 py-1 rounded-full shadow-sm">${p.category}</span></div>
+                            <div class="aspect-[4/3] overflow-hidden bg-slate-100 relative">
+                                <img src="${p.image}" class="img-zoom-hover w-full h-full object-cover" onerror="this.src='https://placehold.co/800x600?text=Image'">
+                                <div class="absolute bottom-3 left-3 flex gap-1 z-10">${tags}</div>
+                            </div>
+                            <div class="p-5 flex flex-col flex-grow">
+                                <h3 class="font-black text-slate-800 text-lg mb-2 line-clamp-2">${p.name}</h3>
+                                <p class="text-sm text-slate-500 mb-5 line-clamp-2 flex-grow">${p.desc || ''}</p>
+                                <div class="mt-auto pt-4 border-t border-slate-50">
+                                    <div class="flex items-end gap-2 mb-4">
+                                        <span class="text-2xl font-black text-brand">${formatMoney(p.price)}</span>
+                                        ${p.originalPrice ? `<span class="text-sm text-slate-400 line-through">${formatMoney(p.originalPrice)}</span>` : ''}
+                                    </div>
+                                    <button class="w-full ${btnClass} font-bold py-3.5 rounded-xl transition-all">${btnText}</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4"><img src="${p.image}" class="w-14 h-14 rounded-xl object-cover border" onerror="this.src='https://placehold.co/100?text=No+Img'"></td>
+                        <td class="p-4"><div class="font-bold text-slate-800">${p.name}</div><span class="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">${p.category}</span></td>
+                        <td class="p-4 font-mono font-bold">${formatMoney(p.price)}</td>
+                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${p.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${p.isActive ? '上架中' : '未上架'}</span></td>
+                        <td class="p-4 text-right">
+                            <button onclick="editProduct('${p.id}')" class="text-slate-400 hover:text-brand w-8 h-8 rounded-lg"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteProduct('${p.id}')" class="text-slate-400 hover:text-red-500 w-8 h-8 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            countDisplay.textContent = activeCount;
+        }
+
+        function renderAnnouncements() {
+            const publicList = document.getElementById('publicAnnouncementList');
+            const adminList = document.getElementById('announcementList');
+            publicList.innerHTML = ''; adminList.innerHTML = '';
+            
+            const sorted = [...window.appState.announcements].sort((a,b) => b.createdAt - a.createdAt);
+            if (sorted.length === 0) {
+                publicList.innerHTML = '<li class="p-8 text-center text-slate-400 text-sm">目前尚無最新消息</li>';
+                adminList.innerHTML = '<li class="p-4 text-center text-slate-400 text-sm">尚無公告</li>';
+                return;
+            }
+
+            sorted.forEach(a => {
+                publicList.innerHTML += `<li class="p-4 hover:bg-slate-50 rounded-xl my-1"><div class="flex items-start gap-3"><i class="fa-solid fa-thumbtack text-brand mt-1 text-sm"></i><p class="text-sm font-medium text-slate-700">${a.text}</p></div></li>`;
+                adminList.innerHTML += `<li class="p-4 hover:bg-slate-50 flex justify-between items-center gap-4"><p class="text-sm text-slate-700">${a.text}</p><button onclick="deleteAnnouncement('${a.id}')" class="text-slate-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button></li>`;
+            });
+        }
+
+        window.addAnnouncement = function() {
+            if (!window.isAdminLoggedIn) return showToast("權限不足", "error");
+            const text = document.getElementById('newAnnouncementText').value.trim();
+            if (!text) return showToast('請輸入內容', 'error');
+            addDoc(announcementsRef, { text, createdAt: Date.now() }).then(() => {
+                document.getElementById('newAnnouncementText').value = '';
+                showToast("發布成功", "success");
+            });
+        };
+
+        window.deleteAnnouncement = function(id) {
+            if (!window.isAdminLoggedIn) return;
+            deleteDoc(doc(announcementsRef, id)).then(() => showToast("已刪除", "success"));
+        };
+
+        window.openProductModal = function() {
+            document.getElementById('prodId').value = '';
+            document.getElementById('prodName').value = '';
+            document.getElementById('prodImage').value = '';
+            document.getElementById('prodPrice').value = '';
+            document.getElementById('prodOriginalPrice').value = '';
+            document.getElementById('prodButtonText').value = '';
+            document.getElementById('prodDesc').value = '';
+            document.getElementById('prodIsActive').checked = true;
+            document.getElementById('prodNoReturn').checked = false;
+            document.getElementById('prodIsFood').checked = false;
+            document.getElementById('modalTitle').textContent = '新增商品';
+            document.getElementById('productModal').classList.remove('hidden');
+            document.getElementById('productModal').classList.add('flex');
+        };
+
+        window.closeProductModal = function() {
+            document.getElementById('productModal').classList.add('hidden');
+            document.getElementById('productModal').classList.remove('flex');
+        };
+
+        window.editProduct = function(id) {
+            const p = window.appState.products.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('prodId').value = p.id;
+            document.getElementById('prodName').value = p.name;
+            document.getElementById('prodImage').value = p.image;
+            document.getElementById('prodCategory').value = p.category || '零食烘焙';
+            document.getElementById('prodPrice').value = p.price;
+            document.getElementById('prodOriginalPrice').value = p.originalPrice || '';
+            document.getElementById('prodButtonText').value = p.buttonText || '';
+            document.getElementById('prodDesc').value = p.desc || '';
+            document.getElementById('prodIsActive').checked = p.isActive;
+            document.getElementById('prodNoReturn').checked = !!p.noReturn;
+            document.getElementById('prodIsFood').checked = !!p.isFood;
+            document.getElementById('modalTitle').textContent = '編輯商品';
+            document.getElementById('productModal').classList.remove('hidden');
+            document.getElementById('productModal').classList.add('flex');
+        };
+
+        window.saveProduct = function() {
+            if (!window.isAdminLoggedIn) return showToast("權限不足", "error");
+            const name = document.getElementById('prodName').value.trim();
+            const image = document.getElementById('prodImage').value.trim();
+            const price = parseInt(document.getElementById('prodPrice').value);
+            if (!name || !image || isNaN(price)) return showToast("請填寫必要欄位", "error");
+
+            const id = document.getElementById('prodId').value;
+            const data = {
+                name, image, price,
+                category: document.getElementById('prodCategory').value,
+                originalPrice: document.getElementById('prodOriginalPrice').value ? parseInt(document.getElementById('prodOriginalPrice').value) : null,
+                buttonText: document.getElementById('prodButtonText').value.trim(),
+                desc: document.getElementById('prodDesc').value.trim(),
+                isActive: document.getElementById('prodIsActive').checked,
+                noReturn: document.getElementById('prodNoReturn').checked,
+                isFood: document.getElementById('prodIsFood').checked,
+                updatedAt: Date.now()
+            };
+
+            const pRef = id ? doc(productsRef, id) : doc(collection(productsRef));
+            if (!id) data.createdAt = Date.now();
+
+            setDoc(pRef, data, { merge: true }).then(() => {
+                showToast("商品儲存成功", "success");
+                closeProductModal();
+            }).catch(e => showToast("儲存失敗", "error"));
+        };
+
+        window.deleteProduct = function(id) {
+            if (!window.isAdminLoggedIn) return;
+            deleteDoc(doc(productsRef, id)).then(() => showToast("商品已刪除", "success"));
+        };
+
+        window.saveSettings = function() {
+            if (!window.isAdminLoggedIn) return showToast("權限不足", "error");
+            const settings = {
+                siteTitle: document.getElementById('setSiteTitle').value.trim() || '冠軍嚴選',
+                logoImage: document.getElementById('setLogoImage').value.trim(),
+                brandColor: document.getElementById('setBrandColor').value.trim() || '#e11d48',
+                heroTitle: document.getElementById('setHeroTitle').value.trim(),
+                heroSubtitle: document.getElementById('setHeroSubtitle').value.trim(),
+                heroImage: document.getElementById('setHeroImage').value.trim(),
+                companyName: document.getElementById('setCompanyName').value.trim(),
+                taxId: document.getElementById('setTaxId').value.trim(),
+                email: document.getElementById('setEmail').value.trim(),
+                phone: document.getElementById('setPhone').value.trim(),
+                mobile: document.getElementById('setMobile').value.trim(),
+                line: document.getElementById('setLine').value.trim(),
+                facebook: document.getElementById('setFacebook').value.trim(),
+                instagram: document.getElementById('setInstagram').value.trim(),
+                threads: document.getElementById('setThreads').value.trim(),
+                returnPolicy: document.getElementById('setReturnPolicy').value.trim(),
+                privacyPolicy: document.getElementById('setPrivacyPolicy').value.trim(),
+                antiFraudPolicy: document.getElementById('setAntiFraudPolicy').value.trim()
+            };
+            setDoc(settingsDocRef, settings).then(() => showToast("設定已同步儲存", "success"));
+        };
+
+        window.openPolicyModal = function(type) {
+            const titleMap = { returnPolicy: '退換貨政策', privacyPolicy: '隱私權保護政策', antiFraudPolicy: '防詐騙宣導' };
+            document.getElementById('policyModalTitle').textContent = titleMap[type];
+            document.getElementById('policyModalContent').textContent = window.appState.settings[type] || '內容尚未設定';
+            document.getElementById('policyModal').classList.remove('hidden');
+            document.getElementById('policyModal').classList.add('flex');
+        };
+
+        window.closePolicyModal = function() {
+            document.getElementById('policyModal').classList.add('hidden');
+            document.getElementById('policyModal').classList.remove('flex');
+        };
+    </script>
+</body>
+</html>
